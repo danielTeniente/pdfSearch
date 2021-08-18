@@ -1,5 +1,6 @@
 import os
 import glob
+import PyPDF2
 
 #conseguir el nombre de las carpetas
 def get_dirs(path='.'):
@@ -16,3 +17,14 @@ def get_PDFs(path='.'):
     ls_pdfs = list(map(lambda x: str(x).replace('\\','/'),ls_pdfs))
     return ls_pdfs
 
+#leer el contenido de un archivo PDF
+def get_PDF_content(path='./test.pdf'):
+    content = ''
+    pdfFile = open(path,'rb')
+    pdfReader = PyPDF2.PdfFileReader(pdfFile)
+    num_pages = pdfReader.numPages
+    for i in range(num_pages):
+        content+=pdfReader.getPage(0).extractText()
+    content = content.strip().replace('\n',' ')
+    pdfFile.close()
+    return content

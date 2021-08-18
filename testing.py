@@ -25,6 +25,15 @@ class TestGetPDFs(unittest.TestCase):
         self.assertEqual(module_res, sol, 
                 f'Your solution is {module_res} rather than {sol}')
 
+class TestGetPDFsText(unittest.TestCase):
+    def test_pdfs_text(self):
+        module_res = functions.get_PDF_content(path='./Referencias/test.pdf')
+        #elimino los espacios en blanco esperando que el contenido
+        #sea el mismo en esencia
+        module_res = module_res.replace(' ','')
+        sol = 'Hello to everyone'.replace(' ','')
+        self.assertEqual(module_res, sol, 
+                f'Your solution is {module_res} rather than {sol}')
 
 
 
