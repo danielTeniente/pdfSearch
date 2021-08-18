@@ -18,13 +18,13 @@ def get_PDFs(path='.'):
     return ls_pdfs
 
 #leer el contenido de un archivo PDF
-def get_PDF_content(path='./test.pdf'):
+def get_PDF_content(path='./test.pdf',page=0):
     content = ''
     pdfFile = open(path,'rb')
     pdfReader = PyPDF2.PdfFileReader(pdfFile)
     num_pages = pdfReader.numPages
-    for i in range(num_pages):
-        content+=pdfReader.getPage(0).extractText()
+    if(0<=page<num_pages):
+        content+=pdfReader.getPage(page).extractText()
     content = content.strip().replace('\n',' ')
     pdfFile.close()
     return content
