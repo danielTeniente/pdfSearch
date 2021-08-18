@@ -9,10 +9,22 @@ class TestGetDirs(unittest.TestCase):
                 f'Your solution is {module_res} rather than {sol}')
     def test_folders_dir(self):
         module_res = functions.get_dirs(path='./Referencias')
-        sol = ['AI','cripto','desarrollo'] 
+        sol = ['AI','cripto','desarrollo','no_pdfs'] 
         self.assertEqual(module_res, sol, 
                 f'Your solution is {module_res} rather than {sol}')
-    
+
+class TestGetPDFs(unittest.TestCase):
+    def test_no_pdfs(self):
+        module_res = functions.get_PDFs(path='./Referencias/no_pdfs')
+        sol = []
+        self.assertEqual(module_res, sol, 
+                f'Your solution is {module_res} rather than {sol}')
+    def test_pdfs_names(self):
+        module_res = functions.get_PDFs(path='./Referencias/AI')
+        sol = ['./Referencias/AI/Book1.pdf','./Referencias/AI/Book2.pdf','./Referencias/AI/Book3.pdf'] 
+        self.assertEqual(module_res, sol, 
+                f'Your solution is {module_res} rather than {sol}')
+
 
 
 

@@ -1,6 +1,5 @@
-from genericpath import isdir
 import os
-from posixpath import join
+import glob
 
 #conseguir el nombre de las carpetas
 def get_dirs(path='.'):
@@ -11,5 +10,9 @@ def get_dirs(path='.'):
         if os.path.isdir(os.path.join(path,name))]
     return ls_dir
 
-
+#conseguir los nombres de los archivos PDF
+def get_PDFs(path='.'):
+    ls_pdfs = glob.glob(os.path.join(path,"*.pdf"))
+    ls_pdfs = list(map(lambda x: str(x).replace('\\','/'),ls_pdfs))
+    return ls_pdfs
 
