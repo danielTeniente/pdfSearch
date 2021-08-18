@@ -12,7 +12,7 @@ class TestGetDirs(unittest.TestCase):
         sol = ['AI','cripto','desarrollo'] 
         self.assertEqual(module_res, sol, 
                 f'Your solution is {module_res} rather than {sol}')
-
+    
 
 
 
