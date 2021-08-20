@@ -28,3 +28,24 @@ def get_PDF_content(path='./test.pdf',page=0):
     content = content.strip().replace('\n',' ')
     pdfFile.close()
     return content
+
+#recibe un string y lo agrega a un archivo de texto
+def write_text(content='',path='.',name='book_references.txt'):
+    # os.path.isfile('C:\\Windows\\System32')
+    file_path = os.path.join(path,name)
+    try:
+        if(os.path.exists(file_path)):
+            book_text = open(file_path,'a') 
+        else:
+            book_text = open(file_path,'w')
+        book_text.write(content+'\n')
+        book_text.close()
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+
+
+
