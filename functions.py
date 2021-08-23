@@ -1,6 +1,20 @@
 import os
 import glob
 import PyPDF2
+import re
+import sys
+
+#imprime el progreso de un proceso
+def drawProgressBar(percent, barLen = 20):
+    sys.stdout.write("\r")
+    progress = ""
+    for i in range(barLen):
+        if i < int(barLen * percent):
+            progress += "="
+        else:
+            progress += " "
+    sys.stdout.write("[ %s ] %.2f%%" % (progress, percent * 100))
+    sys.stdout.flush()
 
 #conseguir el nombre de las carpetas
 def get_dirs(path='.'):
@@ -17,6 +31,12 @@ def get_PDFs(path='.'):
     ls_pdfs = list(map(lambda x: str(x).replace('\\','/'),ls_pdfs))
     return ls_pdfs
 
+#consigue el número de páginas de un PDF
+def get_PDF_numPages(path='./test.pdf'):
+    pdfFile = open(path,'rb')
+    pdfReader = PyPDF2.PdfFileReader(pdfFile)
+    return pdfReader.numPages
+
 #leer el contenido de un archivo PDF
 def get_PDF_content(path='./test.pdf',page=0):
     content = ''
@@ -25,7 +45,7 @@ def get_PDF_content(path='./test.pdf',page=0):
     num_pages = pdfReader.numPages
     if(0<=page<num_pages):
         content+=pdfReader.getPage(page).extractText()
-    content = content.strip().replace('\n',' ')
+    content = content.strip().replace('\n\n','\n')
     pdfFile.close()
     return content
 
@@ -34,18 +54,30 @@ def write_text(content='',path='.',name='book_references.txt'):
     # os.path.isfile('C:\\Windows\\System32')
     file_path = os.path.join(path,name)
     try:
-        if(os.path.exists(file_path)):
-            book_text = open(file_path,'a') 
-        else:
-            book_text = open(file_path,'w')
-        book_text.write(content+'\n')
-        book_text.close()
+        with open(file_path,'a',encoding='utf-8') as f: 
+            f.write(content)
+            f.write('\n\n\n')
+            f.close()
         return True
     except Exception as e:
         print(e)
         return False
 
-
+#busca y devuelve párrafos donde se encuentra la frase clave
+def get_paragraph(phrase='',text=''):
+    paragraph = ''
+    phrase = str(phrase).lower()
+    text = str(text).lower()
+    #pattern = '((\w+)?(\s+)?(\.)?(\W)?){,3}'+phrase+'((\w+)?(\s+)?(\.)?(\W)?){,90}'
+    pattern = phrase+'((\w+)?(\s+)?(\.)?(\W)?){,90}'
+    #print(pattern)
+    search_regex = re.compile(r'{}'.format(pattern))
+    result = search_regex.search(text)
+    if(result):
+        paragraph=result.group()
+        paragraph = paragraph.replace(phrase,phrase.upper())
+    #print(result.group())
+    return paragraph
 
 
 
