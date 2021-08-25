@@ -21,7 +21,7 @@ def scan_book(path,phrase,output_name='text.txt'):
             info = 'Página '+str(current_page)+'\n'
             info += '...'+match+'...'
             if(not functions.write_text(info,
-                path='.',name=output_name)):
+                path='./searching',name=output_name)):
                 print('Grave Error al extraer información')
     print()
     if(got_txt):
@@ -29,15 +29,21 @@ def scan_book(path,phrase,output_name='text.txt'):
 
     
 
+#recorrer todas las carpetas de un directorio
 #path de la carpeta que será analizada
-dir_path ='./Referencias/cripto/'
-#paths de los pdfs existentes
-books_path = functions.get_PDFs(dir_path)
-#lo que se va a buscar
-search_text = 'bitcoin'
+dir_path ='./Referencias/'
+sub_dir = functions.get_dirs(dir_path)
 
-for text_path in books_path:
-    #path del libro actual  
-    #el path servirá para el archivo de texto
-    txt_name = text_path.replace('./','').replace('/','_').replace('.pdf','')+'.txt'
-    scan_book(text_path,search_text,output_name=txt_name)
+for folder in sub_dir:
+
+    folder_path = dir_path+folder
+    #paths de los pdfs existentes
+    books_path = functions.get_PDFs(folder_path)
+    #lo que se va a buscar
+    search_text = 'python'
+
+    for text_path in books_path:
+        #path del libro actual  
+        #el path servirá para el archivo de texto
+        txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
+        scan_book(text_path,search_text,output_name=txt_name)
