@@ -68,15 +68,23 @@ def get_paragraph(phrase='',text=''):
     paragraph = ''
     phrase = str(phrase).lower()
     text = str(text).lower()
-    #pattern = '((\w+)?(\s+)?(\.)?(\W)?){,3}'+phrase+'((\w+)?(\s+)?(\.)?(\W)?){,90}'
-    pattern = phrase+'((\w+)?(\s+)?(\.)?(\W)?){,90}'
-    #print(pattern)
-    search_regex = re.compile(r'{}'.format(pattern))
-    result = search_regex.search(text)
-    if(result):
-        paragraph=result.group()
-        paragraph = paragraph.replace(phrase,phrase.upper())
-    #print(result.group())
+
+    #split por palabra buscada
+    resultados = text.split(phrase)
+    num_resultados = len(resultados)
+    if(num_resultados>1):
+        for i in range(num_resultados):
+            add_char = 70
+            if(i!=0):
+                paragraph+=phrase.upper()
+                paragraph+=resultados[i][:add_char]
+                add_char=len(resultados[i])-add_char
+                if(add_char<1):
+                    add_char=0
+                #else:
+                    #add_char=min(50,add_char)
+            if(i!=num_resultados-1):
+                paragraph+=resultados[i][-add_char:]
     return paragraph
 
 
