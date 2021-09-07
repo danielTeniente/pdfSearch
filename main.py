@@ -1,5 +1,8 @@
 # imprimir el texto de un libro como AI
 import functions
+import time
+#para colocarlo en el nombre
+t = time.time()
 
 def scan_book(path,phrase,output_name='text.txt'):
     #conseguir el número de páginas
@@ -65,8 +68,9 @@ def main(args):
 
         for text_path in books_path:
             #path del libro actual  
+            txt_name = str(int(t))+'_'
             #el path servirá para el archivo de texto
-            txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
+            txt_name += text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
             scan_book(text_path,search_text,output_name=txt_name)        
 
         #recorrer todas las carpetas de un directorio
@@ -79,8 +83,10 @@ def main(args):
 
             for text_path in books_path:
                 #path del libro actual  
+                #se agrega el tiempo para que sea único
+                txt_name = str(int(t))+'_'
                 #el path servirá para el archivo de texto
-                txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
+                txt_name += text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
                 scan_book(text_path,search_text,output_name=txt_name)
 
     else:
