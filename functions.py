@@ -37,7 +37,7 @@ def get_PDF_numPages(path='./test.pdf'):
     pdfReader = PyPDF2.PdfFileReader(pdfFile)
     return pdfReader.numPages
 
-#leer el contenido de un archivo PDF
+#leer el contenido de una página archivo PDF
 def get_PDF_content(path='./test.pdf',page=0):
     content = ''
     pdfFile = open(path,'rb')
@@ -79,5 +79,26 @@ def get_paragraph(phrase='',text=''):
     #print(result.group())
     return paragraph
 
-
+#escanea un libro completo
+def scan_book(path,phrase):
+    #conseguir el número de páginas
+    num_pages = get_PDF_numPages(path)
+    #info para el usuario
+    #print('Libro:',path)
+    #print('Extrayendo texto...')
+    #esta variable tendrá el texto de cada página
+    book_content = ''
+    #verifica si se generó un txt
+    info =''
+    for page in range(num_pages):
+        current_page = page+1
+        #drawProgressBar(percent=current_page/num_pages)
+        book_content = get_PDF_content(path,page)
+        match = get_paragraph(phrase,text=book_content)
+        if(match):
+            info += 'Página '+str(current_page)+'\n'
+            info += '...'+match+'...\n\n'
+    #print()
+    return info
+    
 
