@@ -12,6 +12,14 @@ import tkinter.font
 # los archivos PDF y los resultados se 
 # desplegarán sobre un label. #
 
+####################
+# VARIABLES Y CONSTANTES    
+###################
+
+#directorio donde se guardarán los libros
+DIR_PATH = 'Referencias'
+
+
 raiz = tkinter.Tk()
 raiz.title('Buscador de referencias')
 raiz.iconbitmap("favicon.ico")
@@ -75,7 +83,7 @@ frmResults.grid(row=4,column=0,pady=25,padx=15)
 
 #label para mostrar los resultados
 txtResults = tkinter.Text(frmResults,
-    font=fontContent,width=50,height=5)
+    font=fontContent,width=60,height=10)
 txtResults.grid(row=1,column=0)
 #scrollbar para los resultados
 scrollResult = tkinter.Scrollbar(frmResults,
@@ -88,9 +96,24 @@ txtResults.config(yscrollcommand=scrollResult.set)
 ##############################
 #función que ejecutará el botón
 def press_search_btn():
-    new_text = txtSearch.get()
+    #elimina el contenido del cuadro de texto
     txtResults.delete(1.0,tkinter.constants.END)
-    txtResults.insert(tkinter.constants.END,chars=new_text)
+
+    search_text = txtSearch.get()
+    if(len(search_text)>0):
+        #obtiene el path de todos los PDFs de la carpeta principal
+        books_path = functions.get_PDFs(DIR_PATH)
+        for text_path in books_path:
+            btnSearch["state"] = "disabled"
+            #el path servirá para el archivo de texto
+            txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','')+'.txt'
+            content = functions.scan_book(text_path,search_text)
+            #escribir el contenido en un archivo de texto
+
+            #imrpimri los resultados en el txt
+            txtResults.insert(tkinter.constants.END,
+                chars=content)
+            btnSearch['state'] = 'normal'
 
 #botón de búsqueda
 btnSearch = tkinter.Button(frmMain,
