@@ -27,7 +27,7 @@ DIR_PATH = 'Referencias'
 
 raiz = tkinter.Tk()
 raiz.title('Buscador de referencias')
-raiz.iconbitmap("favicon.ico")
+raiz.iconbitmap("./imgs/favicon.ico")
 
 
 #creación del frame_principal
@@ -128,6 +128,8 @@ def press_search_btn():
                 #imprime los resultados en pantalla
                 txtResults.insert(tkinter.constants.END,
                     chars=content)
+                if(functions.write_text(content,'./searching',txt_name)):
+                    print('Guardado archivo de texto:',txt_name)
             
         #recorre todas las carpetas de un directorio
         sub_dir = functions.get_dirs(DIR_PATH)
@@ -154,6 +156,8 @@ def press_search_btn():
                     #se agregan los resultados al cuadro de texto
                     txtResults.insert(tkinter.constants.END,
                         chars=content)
+                    if(functions.write_text(content,'./searching',txt_name)):
+                        print('Guardado archivo de texto:',txt_name)
         #desbloquea el botón para otra búsqueda
         btnSearch['state'] = 'normal'
 
