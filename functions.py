@@ -1,8 +1,8 @@
 import os
 import glob
 import PyPDF2
-import re
 import sys
+
 
 #imprime el progreso de un proceso
 def drawProgressBar(percent, barLen = 20):
@@ -100,6 +100,7 @@ def scan_book(path,phrase):
     info =''
     for page in range(num_pages):
         current_page = page+1
+        drawProgressBar(percent=current_page/num_pages)
         #drawProgressBar(percent=current_page/num_pages)
         book_content = get_PDF_content(path,page)
         match = get_paragraph(phrase,text=book_content)
