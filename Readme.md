@@ -10,3 +10,13 @@ Ejemplo de ejecución:
 Donde 'Referencias' es la carpeta que tiene los
 PDFs donde se buscarán las palabras clave.
 
+## Requisitos de funcionamiento
+* Poppler para el manejo de PDFs:
+https://anaconda.org/conda-forge/poppler
+
+* Tesseract para el funcionamiento del OCR:
+https://github.com/UB-Mannheim/tesseract/wiki
+
+* Se debe configurar el path de tesseract. Por defecto la configuración es: 
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
