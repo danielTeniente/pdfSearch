@@ -1,3 +1,4 @@
+from shutil import Error
 import pdf2image 
 import os
 import glob
@@ -5,6 +6,7 @@ import PyPDF2
 import sys
 import pytesseract
 import cv2
+
 
 
 #imprime el progreso de un proceso
@@ -49,7 +51,12 @@ def get_book_name(book_path:str) -> str:
     """Recibe el path de un libro y retorna su nombre
     sin la terminación .pdf"""
     #tomo sólo el nombre del libro
-    book_name = book_path.split('/')[-1]
+    if('/' in book_path or '\\' in book_path):
+        book_name = book_path.split('/')[-1]
+        book_name = book_path.split('\\')[-1]
+    else:
+        book_name = book_path
+
     #le quito el tipo de dato
     book_name = book_name.replace('.pdf','')
     return book_name
@@ -85,10 +92,11 @@ def create_book_images(book_path:str) -> bool:
         imgs_folder = 'book_imgs/'
         #creo un for para recorrer cada imagen
         for i,page in enumerate(pages):
-            book_img_path = imgs_folder+book_img_name+'_page_'+str(i)+ ".jpg"  
+            book_img_path = imgs_folder+book_img_name+'_page_'+str(i+1)+ ".jpg"  
             page.save(book_img_path, "JPEG")
         return True
-    except:
+    except Error:
+        print(Error)
         return False
 
 #separa la página en párrafos
@@ -139,15 +147,15 @@ def ocr_img(img_path:str) ->str:
     escaneo OCR para retornar el texto"""
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
     # load the original image
-    image = cv2.imread(img_path)
     paragraphs = mark_region(img_path)
+    image = cv2.imread(img_path)
     text = ''
     for pi in paragraphs:
         upleft_corner = pi[0]
         downright_corner = pi[1]
         #tomo sólo la sección del párrafo
-        img = image[upleft_corner[0][1]:upleft_corner[1][1], 
-                downright_corner[0][0]:downright_corner[1][0]]    
+        img = image[upleft_corner[1]:downright_corner[1],
+                upleft_corner[0]:downright_corner[0]]    
         #se convierte a blanco y negro
         ret,thresh1 = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
         text += str(pytesseract.image_to_string(thresh1, config='--psm 6'))

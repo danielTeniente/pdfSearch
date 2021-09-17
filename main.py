@@ -56,7 +56,7 @@ def main(args):
     python main.py References
     python main.py 'References folder'
     """
-    if(len(args)==1):
+    if(len(args)==1):   
 
         #path de la carpeta que será analizada
         dir_path =str(args[0])
