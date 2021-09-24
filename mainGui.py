@@ -2,6 +2,7 @@ import tkinter.constants
 import functions
 import tkinter
 import tkinter.font
+import tkinter.ttk
 
 # 
 # DANIEL DIAZ
@@ -67,6 +68,29 @@ txtSearch = tkinter.Entry(frmForm,
     font=fontContent)
 txtSearch.grid(row=0,column=1,padx=10,pady=10)
 
+#etiqueta para pedir seleccionar un libro
+lbAsk = tkinter.Label(frmForm,
+    text='Selecciona un libro',
+    font=fontContent)
+lbAsk.grid(row=1,column=0)
+
+#lista desplegable de los libros disponibles
+#libros en la carpeta principal
+books_path = functions.get_PDFs(DIR_PATH)
+#libros de las carpetas hijas
+sub_dir = functions.get_dirs(DIR_PATH)
+for folder in sub_dir:
+    #se agrega el símbolo para indicar directorio
+    folder_path = DIR_PATH+'/'+folder
+    #paths de los pdfs existentes
+    books_path += functions.get_PDFs(folder_path)
+fontList = tkinter.font.Font(size=12)
+cmbBookList = tkinter.ttk.Combobox(frmForm,
+    values=books_path,
+    width=40,font=fontList,
+    state='readonly')
+cmbBookList.grid(row=1,column=1)
+
 ##############################
 # FRAME PRINCIPAL #
 ##############################
@@ -78,9 +102,8 @@ lbResultTitle.grid(row=3,column=0,pady=20)
 
 #frame para los resultados
 frmResults = tkinter.Frame(frmMain)
-frmResults.grid(row=4,column=0,pady=25,padx=15)
+frmResults.grid(row=5,column=0,pady=25,padx=15)
 #frmResults.config(background='white')
-
 
 ##############################
 # FRAME RESULTADOS  #
@@ -88,7 +111,7 @@ frmResults.grid(row=4,column=0,pady=25,padx=15)
 
 #label para mostrar los resultados
 txtResults = tkinter.Text(frmResults,
-    font=fontContent,width=65,height=15)
+    font=fontContent,width=75,height=15)
 txtResults.grid(row=1,column=0)
 #scrollbar para los resultados
 scrollResult = tkinter.Scrollbar(frmResults,
@@ -103,63 +126,38 @@ txtResults.config(yscrollcommand=scrollResult.set)
 def press_search_btn():
     #elimina el contenido del cuadro de texto
     txtResults.delete(1.0,tkinter.constants.END)
-
+    #toma el contenido de combobox
+    selected_book = cmbBookList.get()
+    #toma las palabras a buscar
     search_text = txtSearch.get()
-    if(len(search_text)>0):
+    #realiza la búsqueda sólo si se ha seleccionado
+    #un libro y se ha escrito palabra clave
+    if(len(search_text)>0 and selected_book!=''):
+        #escribe el nombre del libro en el cuadro de texto
+        txtResults.insert(tkinter.constants.END,
+                        chars=selected_book+'\n')
+        #nombre del archivo de texto donde se guardará la búsqueda
+        txt_name = selected_book.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
+        print(selected_book)
+        #resultado de la búsqueda
+        resultados = functions.scan_book(selected_book,search_text)
+        #sólo si hay coincidencia se agrega contenido
+        if(len(resultados)>0):
+            content = txt_name+'\n'
+            content += resultados
+        else:
+            content = 'No se ha encontrado información.'
+        #imprime los resultados en pantalla
+        txtResults.insert(tkinter.constants.END,
+            chars=content)
+        if(functions.write_text(content,'./searching',txt_name)):
+            print('\nGuardado archivo de texto:',txt_name)
+        print()
         #desactiva el botón mientras realiza la búsqueda
-        btnSearch["state"] = "disabled"
-
-        #obtiene el path de todos los PDFs de la carpeta principal
-        books_path = functions.get_PDFs(DIR_PATH)
-        #escanea todos los PDFs de la carpeta principal
-        for text_path in books_path:
-            #el path servirá para el archivo de texto
-            txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
-            print(text_path)
-            resultados = functions.scan_book(text_path,search_text)
-            if(len(resultados)>0):
-                content = txt_name+'\n'
-                content += resultados
-                #espacio en la consola (Opcional)
-                print()
-                content+='\n'
-                #escribir el contenido en un archivo de texto
-
-                #imprime los resultados en pantalla
-                txtResults.insert(tkinter.constants.END,
-                    chars=content)
-                if(functions.write_text(content,'./searching',txt_name)):
-                    print('Guardado archivo de texto:',txt_name)
+        #btnSearch["state"] = "disabled"
             
-        #recorre todas las carpetas de un directorio
-        sub_dir = functions.get_dirs(DIR_PATH)
-        for folder in sub_dir:
-
-            #se agrega el símbolo para indicar directorio
-            folder_path = DIR_PATH+'/'+folder
-
-            #paths de los pdfs existentes
-            books_path = functions.get_PDFs(folder_path)
-
-            for text_path in books_path:
-                #el path servirá para el archivo de texto
-                txt_name = text_path.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
-                print(text_path)
-                resultados = functions.scan_book(text_path,search_text)
-                if(len(resultados)>0):
-                    content = txt_name+'\n'
-                    content += resultados
-                    print()
-                    content +='\n'
-                    #se escribe en un archivo de texto
-
-                    #se agregan los resultados al cuadro de texto
-                    txtResults.insert(tkinter.constants.END,
-                        chars=content)
-                    if(functions.write_text(content,'./searching',txt_name)):
-                        print('Guardado archivo de texto:',txt_name)
         #desbloquea el botón para otra búsqueda
-        btnSearch['state'] = 'normal'
+        #btnSearch['state'] = 'normal'
 
 
 #botón de búsqueda
