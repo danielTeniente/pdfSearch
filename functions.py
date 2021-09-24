@@ -1,7 +1,13 @@
+from shutil import Error
+import pdf2image 
 import os
 import glob
 import PyPDF2
 import sys
+import pytesseract
+import cv2
+
+
 
 
 #imprime el progreso de un proceso
@@ -37,7 +43,126 @@ def get_PDF_numPages(path='./test.pdf'):
     pdfReader = PyPDF2.PdfFileReader(pdfFile)
     return pdfReader.numPages
 
-#leer el contenido de una página archivo PDF
+def get_book_name(book_path:str) -> str:
+    """Recibe el path de un libro y retorna su nombre
+    sin la terminación .pdf"""
+    #tomo sólo el nombre del libro
+    if('/' in book_path or '\\' in book_path):
+        book_name = book_path.split('/')[-1]
+        book_name = book_path.split('\\')[-1]
+    else:
+        book_name = book_path
+
+    #le quito el tipo de dato
+    book_name = book_name.replace('.pdf','')
+    return book_name
+
+#################
+# OCR: Voy a hacer que esta función aplique
+# un OCR sobre el contenido de la página enviada 
+###############
+
+#necesito saber si las fotos ya existen
+#se asume que si la primera foto existe, entonces
+# el libro ya fue escaneado
+def there_are_imgs(book_path:str) -> bool:
+    """Recibe el path de un libro y verifica
+    si ya se han generado sus imágenes para no volver
+    a hacerlo"""
+    #consigo el inicio para el nombre de la imagen
+    book_img_name = get_book_name(book_path)
+    #agrego la terminación de la primera página
+    book_img_name += '_page_1.jpg'
+    #verifico si esa imagen existe en la carpeta de imágenes
+    imgs_folder = 'book_imgs/'
+    return os.path.isfile(imgs_folder+book_img_name)
+
+#necesito generar las fotos del libro
+def create_book_images(book_path:str) -> bool:
+    """Genera las imágenes de un libro dado.
+    Retorna verdadero si todas las imágenes se pudieron
+    crear satisfactoriamente"""
+    try:
+        #consigo las páginas del libro
+        pages = pdf2image.convert_from_path(pdf_path=book_path, dpi=350)
+        #consigo el nombre del libro para
+        #los nombres de las imgs
+        book_img_name = get_book_name(book_path)
+        #declaro la carpeta de las imágenes
+        imgs_folder = 'book_imgs/'
+        #creo un for para recorrer cada imagen
+        for i,page in enumerate(pages):
+            book_img_path = imgs_folder+book_img_name+'_page_'+str(i+1)+ ".jpg"  
+            page.save(book_img_path, "JPEG")
+        return True
+    except Error:
+        print(Error)
+        return False
+
+#separa la página en párrafos
+def mark_region(image_path:str):
+    """Encuentra las regiones donde se encuentra
+    el texto para que el ocr se enfoque sólo en esas
+    zonas"""
+    #abre la imagen
+    im = cv2.imread(image_path)
+    #lo convierte a gris
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    #vuelve la imagen borrosa
+    blur = cv2.GaussianBlur(gray, (9,9), 0)
+    #binarización
+    thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,11,30)
+
+    # dilata para unir zonas cercanas
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9,9))
+    dilate = cv2.dilate(thresh, kernel, iterations=4)
+
+    # encuentra los contornos de las manchas
+    cnts = cv2.findContours(dilate, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+    #esta lista almacenará los rectángulos que
+    #envuelven las zonas con texto
+    line_items_coordinates = []
+    last_y = cv2.boundingRect(cnts[0])[1]
+    for i,c in enumerate(cnts):
+        x,y,w,h = cv2.boundingRect(c)
+        #si dos rectángulos están en la misma y
+        #deben estar en la misma línea
+        if((y-last_y)**2<25 and i>0):
+            last_c = line_items_coordinates[-1]
+            lx = last_c[0][0]
+            line_items_coordinates[-1] = [(lx,y), (x+w, y+h)]            
+        else:
+            # almacenan las coordenadas de la esquina 
+            # superior izquierda y la inferior derecha
+            line_items_coordinates.append([(x,y), (x+w, y+h)])
+        last_y=y
+    return line_items_coordinates
+
+#tengo que recorrer todas las fotos de un mismo libro
+#para retornar el texto mediante el OCR
+def ocr_img(img_path:str) ->str:
+    """Recibe el path de una imagen y realiza un
+    escaneo OCR para retornar el texto"""
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    # load the original image
+    paragraphs = mark_region(img_path)
+    image = cv2.imread(img_path)
+    text = ''
+    for pi in paragraphs:
+        upleft_corner = pi[0]
+        downright_corner = pi[1]
+        #tomo sólo la sección del párrafo
+        img = image[upleft_corner[1]:downright_corner[1],
+                upleft_corner[0]:downright_corner[0]]    
+        #se convierte a blanco y negro
+        ret,thresh1 = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
+        text += str(pytesseract.image_to_string(thresh1, config='--psm 6'))
+    return text
+    
+
+#leer el contenido de un archivo PDF
 def get_PDF_content(path='./test.pdf',page=0):
     content = ''
     pdfFile = open(path,'rb')
@@ -65,6 +190,8 @@ def write_text(content='',path='.',name='book_references.txt'):
 
 #busca y devuelve párrafos donde se encuentra la frase clave
 def get_paragraph(phrase='',text=''):
+    """Retorna el párrafo donde se encontró la frase
+    buscada."""
     paragraph = ''
     phrase = str(phrase).lower()
     text = str(text).lower()

@@ -10,3 +10,23 @@ Ejemplo de ejecución:
 Donde 'Referencias' es la carpeta que tiene los
 PDFs donde se buscarán las palabras clave.
 
+## Interfaz gráfica
+La interfaz gráfica se puede usar ejecutando el archivo [mainGui.py](./mainGui.py).
+* python mainGui.py
+
+## OCR
+### Requisitos de funcionamiento
+* Poppler para el manejo de PDFs:
+https://anaconda.org/conda-forge/poppler
+
+* Tesseract para el funcionamiento del OCR:
+https://github.com/UB-Mannheim/tesseract/wiki
+
+* Se debe configurar el path de tesseract. Por defecto la configuración es: 
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+### Lista de tareas
+* Almacenar los archivos txt del OCR, página por página, de un libro ya buscado para no tener que usar el OCR una y otra vez, ahorrando tiempo.
+
+
+
