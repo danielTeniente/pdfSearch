@@ -3,6 +3,7 @@ import functions
 import tkinter
 import tkinter.font
 import tkinter.ttk
+import tkinter.messagebox 
 
 # 
 # DANIEL DIAZ
@@ -156,12 +157,46 @@ def press_search_btn():
         #if(functions.write_text(content,'./searching',txt_name)):
             #print('\nGuardado archivo de texto:',txt_name)
         print()
-        #desactiva el botón mientras realiza la búsqueda
-        #btnSearch["state"] = "disabled"
             
         #desbloquea el botón para otra búsqueda
         #btnSearch['state'] = 'normal'
 
+def press_OCR_btn():
+    #elimina el contenido del cuadro de texto
+    txtResults.delete(1.0,tkinter.constants.END)
+    #toma el contenido de combobox
+    selected_book = cmbBookList.get()
+    #toma las palabras a buscar
+    search_text = txtSearch.get()
+    #realiza la búsqueda sólo si se ha seleccionado
+    #un libro y se ha escrito palabra clave
+    if(len(search_text)>0 and selected_book!=''):
+        result=tkinter.messagebox.askquestion('Búsqueda inteligente',
+            'La búsqueda inteligente tarda más tiempo\n'+
+            'para poder leer mejor el contenido.\n'+
+            '¿Quiere continuar?')
+        if(result=='yes'):
+            #escribe el nombre del libro en el cuadro de texto
+            txtResults.insert(tkinter.constants.END,
+                            chars=selected_book+'\n')
+            #se imprime el path del libro en consola
+            print(selected_book)
+            #resultado de la búsqueda
+            resultados = functions.scan_book_with_OCR(selected_book,search_text)
+            #sólo si hay coincidencia se agrega contenido
+            if(len(resultados)>0):
+                #save results optional
+                #content = txt_name+'\n'
+                content = resultados
+            else:
+                content = 'No se ha encontrado información.'
+            #imprime los resultados en pantalla
+            txtResults.insert(tkinter.constants.END,
+                chars=content)
+            #save results optional
+            #if(functions.write_text(content,'./searching',txt_name)):
+                #print('\nGuardado archivo de texto:',txt_name)
+            print()
 
 #botón de búsqueda
 btnSearch = tkinter.Button(frmMain,
@@ -169,6 +204,11 @@ btnSearch = tkinter.Button(frmMain,
     command=press_search_btn)
 btnSearch.grid(row=2,column=0,pady=10)
 
+#botón de búsqueda con OCR
+btnOCR = tkinter.Button(frmMain,
+    text='Búsqueda inteligente',font=fontContent,
+    command=press_OCR_btn)
+btnOCR.grid(row=6,column=0,pady=10)
 
 raiz.mainloop()
 

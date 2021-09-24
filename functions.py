@@ -7,9 +7,6 @@ import sys
 import pytesseract
 import cv2
 
-
-
-
 #imprime el progreso de un proceso
 def drawProgressBar(percent, barLen = 20):
     sys.stdout.write("\r")
@@ -47,9 +44,9 @@ def get_book_name(book_path:str) -> str:
     """Recibe el path de un libro y retorna su nombre
     sin la terminación .pdf"""
     #tomo sólo el nombre del libro
-    if('/' in book_path or '\\' in book_path):
+    if(('/' in book_path) or ('\\' in book_path)):
         book_name = book_path.split('/')[-1]
-        book_name = book_path.split('\\')[-1]
+        book_name = book_name.split('\\')[-1]
     else:
         book_name = book_path
 
@@ -201,7 +198,7 @@ def get_paragraph(phrase='',text=''):
     num_resultados = len(resultados)
     if(num_resultados>1):
         for i in range(num_resultados):
-            add_char = 70
+            add_char = 80
             if(i!=0):
                 paragraph+=phrase.upper()
                 paragraph+=resultados[i][:add_char]
@@ -213,6 +210,44 @@ def get_paragraph(phrase='',text=''):
             if(i!=num_resultados-1):
                 paragraph+=resultados[i][-add_char:]
     return paragraph
+
+#escanea el libro completo con OCR
+def scan_book_with_OCR(path:str,phrase:str):
+    #conseguir el número de páginas
+    num_pages = get_PDF_numPages(path)
+    #verifico si las imágenes del libro existen
+    if(not there_are_imgs(path)):
+        print('Se crearán imágenes del libro...')
+        #si no hay imágenes, hay que crearlas
+        if(create_book_images(path)):
+            print('El libro se escaneó por primera vez y se generó una imagen de cada página')
+        else:
+            return 'El buscador inteligente tuvo problemas con este libro'
+
+    #esta variable tendrá el texto de cada página
+    book_content = ''
+    #esta variable tendrá los resultados encontrados
+    info =''
+    for page in range(num_pages):
+        #los índices de páginas empiezan en 1
+        current_page = page+1
+        #dibujo una barra de progreso por si acaso
+        drawProgressBar(percent=current_page/num_pages)
+        #declaro la carpeta de las imágenes
+        imgs_folder = 'book_imgs/'
+        #consigo el nombre del libro
+        nombre = get_book_name(path)
+        #texto de página para el nombre de la imagen
+        pagina = '_page_'
+        #escaneo la imagen del libro
+        book_content = ocr_img(imgs_folder+nombre+pagina+str(current_page)+'.jpg')
+        #obtengo el texto que estoy buscando
+        match = get_paragraph(phrase,text=book_content)
+        if(match):
+            info += 'Página '+str(current_page)+'\n'
+            info += '...'+match+'...\n\n'
+    return info
+
 
 #escanea un libro completo
 def scan_book(path,phrase):
