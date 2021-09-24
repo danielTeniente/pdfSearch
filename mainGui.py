@@ -137,21 +137,24 @@ def press_search_btn():
         txtResults.insert(tkinter.constants.END,
                         chars=selected_book+'\n')
         #nombre del archivo de texto donde se guardará la búsqueda
-        txt_name = selected_book.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
+        #save results optional
+        #txt_name = selected_book.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
         print(selected_book)
         #resultado de la búsqueda
         resultados = functions.scan_book(selected_book,search_text)
         #sólo si hay coincidencia se agrega contenido
         if(len(resultados)>0):
-            content = txt_name+'\n'
-            content += resultados
+            #save results optional
+            #content = txt_name+'\n'
+            content = resultados
         else:
             content = 'No se ha encontrado información.'
         #imprime los resultados en pantalla
         txtResults.insert(tkinter.constants.END,
             chars=content)
-        if(functions.write_text(content,'./searching',txt_name)):
-            print('\nGuardado archivo de texto:',txt_name)
+        #save results optional
+        #if(functions.write_text(content,'./searching',txt_name)):
+            #print('\nGuardado archivo de texto:',txt_name)
         print()
         #desactiva el botón mientras realiza la búsqueda
         #btnSearch["state"] = "disabled"
