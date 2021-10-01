@@ -88,7 +88,10 @@ def create_book_images(book_path:str) -> bool:
         #declaro la carpeta de las imágenes
         imgs_folder = 'book_imgs/'
         #creo un for para recorrer cada imagen
+        num_pages = get_PDF_numPages(book_path)
         for i,page in enumerate(pages):
+            current_page = i+1
+            drawProgressBar(percent=current_page/num_pages)
             book_img_path = imgs_folder+book_img_name+'_page_'+str(i+1)+ ".jpg"  
             page.save(book_img_path, "JPEG")
         return True
@@ -117,7 +120,9 @@ def mark_region(image_path:str):
     # encuentra los contornos de las manchas
     cnts = cv2.findContours(dilate, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-
+    #para las páginas en blanco
+    if(len(cnts)<1):
+        return []
     #esta lista almacenará los rectángulos que
     #envuelven las zonas con texto
     line_items_coordinates = []
@@ -126,6 +131,7 @@ def mark_region(image_path:str):
         x,y,w,h = cv2.boundingRect(c)
         #si dos rectángulos están en la misma y
         #deben estar en la misma línea
+
         if((y-last_y)**2<25 and i>0):
             last_c = line_items_coordinates[-1]
             lx = last_c[0][0]
@@ -153,9 +159,11 @@ def ocr_img(img_path:str) ->str:
         #tomo sólo la sección del párrafo
         img = image[upleft_corner[1]:downright_corner[1],
                 upleft_corner[0]:downright_corner[0]]    
-        #se convierte a blanco y negro
-        ret,thresh1 = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
-        text += str(pytesseract.image_to_string(thresh1, config='--psm 6'))
+        #evito espacios en blanco
+        if(0 not in img.shape):
+            #se convierte a blanco y negro
+            ret,thresh1 = cv2.threshold(img,120,255,cv2.THRESH_BINARY)
+            text += str(pytesseract.image_to_string(thresh1, config='--psm 6'))
     return text
     
 
@@ -198,7 +206,7 @@ def get_paragraph(phrase='',text=''):
     num_resultados = len(resultados)
     if(num_resultados>1):
         for i in range(num_resultados):
-            add_char = 80
+            add_char = 100
             if(i!=0):
                 paragraph+=phrase.upper()
                 paragraph+=resultados[i][:add_char]
