@@ -2,6 +2,21 @@ import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
 import functions  # Se asume que este módulo contiene las funciones get_PDFs, get_dirs, scan_book y scan_book_with_OCR
 
+class Worker(QtCore.QThread):
+    # Señal para enviar el resultado cuando la tarea se complete.
+    result_ready = QtCore.pyqtSignal(str)
+
+    def __init__(self, func, *args, **kwargs):
+        super().__init__()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        # Ejecuta la función de búsqueda pasada y emite el resultado.
+        result = self.func(*self.args, **self.kwargs)
+        self.result_ready.emit(result)
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -84,48 +99,67 @@ class MainWindow(QtWidgets.QMainWindow):
         folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Selecciona la carpeta de documentos")
         if folder:
             self.dir_path = folder
-            # Se obtienen los PDFs de la carpeta y de sus subcarpetas
-            books_path = functions.get_PDFs(self.dir_path)
+            # Obtener los paths completos de los PDFs
+            full_paths = functions.get_PDFs(self.dir_path)
             sub_dirs = functions.get_dirs(self.dir_path)
             for sub in sub_dirs:
                 folder_path = f"{self.dir_path}/{sub}"
-                books_path += functions.get_PDFs(folder_path)
-            # Se actualiza la lista en el combobox
+                full_paths += functions.get_PDFs(folder_path)
+            # Crear un diccionario: {nombre_del_archivo: path_completo}
+            import os  # Asegúrate de tener importado os (si aún no lo tienes en el archivo)
+            self.books_dict = {}
+            for path in full_paths:
+                file_name = os.path.basename(path)
+                self.books_dict[file_name] = path
+            # Actualizar el combobox con solo los nombres de los archivos
             self.book_combo.clear()
-            self.book_combo.addItems(books_path)
-    
+            self.book_combo.addItems(list(self.books_dict.keys()))
+        
     def press_search_btn(self):
-        """Ejecuta la búsqueda estándar en el libro seleccionado."""
         self.results_text.clear()
-        selected_book = self.book_combo.currentText()
+        selected_name = self.book_combo.currentText()  # Ahora es el nombre del archivo
         search_text = self.search_edit.text()
-        if search_text and selected_book:
-            self.results_text.append(selected_book)
-            print(selected_book)
-            resultados = functions.scan_book(selected_book, search_text)
-            content = resultados if resultados else "No se ha encontrado información."
-            self.results_text.append(content)
-            print()
-    
+        if search_text and selected_name:
+            # Recuperar el path completo usando el diccionario
+            full_path = self.books_dict.get(selected_name)
+            self.results_text.append(selected_name)
+            self.progress_dialog = QtWidgets.QProgressDialog("Buscando...", "", 0, 0, self)
+            self.progress_dialog.setWindowTitle("Búsqueda en progreso")
+            self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+            self.progress_dialog.show()
+            self.worker = Worker(functions.scan_book, full_path, search_text)
+            self.worker.result_ready.connect(self.handle_worker_result)
+            self.worker.start()
+
     def press_OCR_btn(self):
-        """Ejecuta la búsqueda inteligente (OCR) tras confirmar con el usuario."""
         self.results_text.clear()
-        selected_book = self.book_combo.currentText()
+        selected_name = self.book_combo.currentText()  # Nombre del archivo
         search_text = self.search_edit.text()
-        if search_text and selected_book:
-            reply = QtWidgets.QMessageBox.question(self, "Búsqueda inteligente",
-                                                   "La búsqueda inteligente tarda más tiempo\n"
-                                                   "para poder leer mejor el contenido.\n"
-                                                   "¿Quiere continuar?",
-                                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-                                                   QtWidgets.QMessageBox.No)
+        if search_text and selected_name:
+            reply = QtWidgets.QMessageBox.question(
+                self, "Búsqueda inteligente",
+                "La búsqueda inteligente tarda más tiempo para poder leer mejor el contenido.\n¿Quiere continuar?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No
+            )
             if reply == QtWidgets.QMessageBox.Yes:
-                self.results_text.append(selected_book)
-                print(selected_book)
-                resultados = functions.scan_book_with_OCR(selected_book, search_text)
-                content = resultados if resultados else "No se ha encontrado información."
-                self.results_text.append(content)
-                print()
+                self.results_text.append(selected_name)
+                # Recuperar el path completo desde el diccionario
+                full_path = self.books_dict.get(selected_name)
+                self.progress_dialog = QtWidgets.QProgressDialog("Buscando con OCR...", "", 0, 0, self)
+                self.progress_dialog.setWindowTitle("Búsqueda en progreso")
+                self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+                self.progress_dialog.show()
+                self.worker = Worker(functions.scan_book_with_OCR, full_path, search_text)
+                self.worker.result_ready.connect(self.handle_worker_result)
+                self.worker.start()
+                
+    def handle_worker_result(self, result):
+        if hasattr(self, 'progress_dialog'):
+            self.progress_dialog.close()
+        content = result if result else "No se ha encontrado información."
+        self.results_text.append(content)
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
