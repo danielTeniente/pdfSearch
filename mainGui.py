@@ -1,6 +1,6 @@
 import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
-import functions  # Se asume que este módulo contiene las funciones get_PDFs, get_dirs, scan_book, scan_book_with_OCR y ahora has_selectable_text
+from utils import pdf_utils, ocr_utils  # Se importan los módulos divididos
 
 class Worker(QtCore.QThread):
     # Señal para enviar el resultado cuando la tarea se complete.
@@ -103,7 +103,7 @@ class MainWindow(QtWidgets.QMainWindow):
         ocr_btn.clicked.connect(self.press_OCR_btn)
         btn_layout.addWidget(ocr_btn)
 
-        # Nuevo botón "Guardar" para guardar el resultado
+        # Botón "Guardar" para guardar el resultado
         save_btn = QtWidgets.QPushButton("Guardar")
         save_btn.setFont(search_font)
         save_btn.clicked.connect(self.save_result)
@@ -114,14 +114,14 @@ class MainWindow(QtWidgets.QMainWindow):
         folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Selecciona la carpeta de documentos")
         if folder:
             self.dir_path = folder
-            # Obtener los paths completos de los PDFs
-            full_paths = functions.get_PDFs(self.dir_path)
-            sub_dirs = functions.get_dirs(self.dir_path)
+            # Obtener los paths completos de los PDFs usando pdf_utils
+            full_paths = pdf_utils.get_PDFs(self.dir_path)
+            sub_dirs = pdf_utils.get_dirs(self.dir_path)
             for sub in sub_dirs:
                 folder_path = f"{self.dir_path}/{sub}"
-                full_paths += functions.get_PDFs(folder_path)
+                full_paths += pdf_utils.get_PDFs(folder_path)
             # Crear un diccionario: {nombre_del_archivo: path_completo}
-            import os  # Asegúrate de tener importado os (si aún no lo tienes en el archivo)
+            import os
             self.books_dict = {}
             for path in full_paths:
                 file_name = os.path.basename(path)
@@ -136,7 +136,7 @@ class MainWindow(QtWidgets.QMainWindow):
         selected_name = self.book_combo.currentText()
         if selected_name:
             full_path = self.books_dict.get(selected_name)
-            if functions.has_selectable_text(full_path):
+            if pdf_utils.has_selectable_text(full_path):
                 self.note_label.setText("Este PDF tiene texto seleccionable. Intenta primero la búsqueda normal.")
             else:
                 self.note_label.setText("Este PDF no tiene texto seleccionable. Intenta la búsqueda inteligente directamente.")
@@ -148,7 +148,6 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.information(self, "Guardar resultado", "No hay contenido para guardar.")
             return
 
-        # Abre un diálogo para que el usuario seleccione la ubicación y nombre del archivo
         file_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar resultado", "", "Archivos de texto (*.txt)")
         if file_path:
             try:
@@ -160,17 +159,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def press_search_btn(self):
         self.results_text.clear()
-        selected_name = self.book_combo.currentText()  # Ahora es el nombre del archivo
+        selected_name = self.book_combo.currentText()  # Nombre del archivo
         search_text = self.search_edit.text()
         if search_text and selected_name:
-            # Recuperar el path completo usando el diccionario
             full_path = self.books_dict.get(selected_name)
             self.results_text.append(selected_name)
             self.progress_dialog = QtWidgets.QProgressDialog("Buscando...", "", 0, 0, self)
             self.progress_dialog.setWindowTitle("Búsqueda en progreso")
             self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
             self.progress_dialog.show()
-            self.worker = Worker(functions.scan_book, full_path, search_text)
+            # Se usa la función scan_book del módulo pdf_utils
+            self.worker = Worker(pdf_utils.scan_book, full_path, search_text)
             self.worker.result_ready.connect(self.handle_worker_result)
             self.worker.start()
 
@@ -187,13 +186,13 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             if reply == QtWidgets.QMessageBox.Yes:
                 self.results_text.append(selected_name)
-                # Recuperar el path completo desde el diccionario
                 full_path = self.books_dict.get(selected_name)
                 self.progress_dialog = QtWidgets.QProgressDialog("Buscando con OCR...", "", 0, 0, self)
                 self.progress_dialog.setWindowTitle("Búsqueda en progreso")
                 self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
                 self.progress_dialog.show()
-                self.worker = Worker(functions.scan_book_with_OCR, full_path, search_text)
+                # Se usa la función scan_book_with_OCR del módulo ocr_utils
+                self.worker = Worker(ocr_utils.scan_book_with_OCR, full_path, search_text)
                 self.worker.result_ready.connect(self.handle_worker_result)
                 self.worker.start()
                 
