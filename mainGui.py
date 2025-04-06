@@ -1,214 +1,212 @@
-import tkinter.constants 
-import functions
-import tkinter
-import tkinter.font
-import tkinter.ttk
-import tkinter.messagebox 
+import sys
+from PyQt5 import QtWidgets, QtGui, QtCore
+from utils import pdf_utils, ocr_utils  # Se importan los módulos divididos
 
-# 
-# DANIEL DIAZ
-# Función principal para la interfaz gráfica
-# El programa debe contener un cuadro de texto
-# para introducir el término de búsqueda.
-# El botón empezará el proceso de escanera            
-# los archivos PDF y los resultados se 
-# desplegarán sobre un label. #
+class Worker(QtCore.QThread):
+    # Señal para enviar el resultado cuando la tarea se complete.
+    result_ready = QtCore.pyqtSignal(str)
 
-###AVISO PARA EL USUARIO
-print('####################')
-print('PANEL DE PROGRESO')
-print('####################')
+    def __init__(self, func, *args, **kwargs):
+        super().__init__()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
 
-####################
-# VARIABLES Y CONSTANTES    
-###################
+    def run(self):
+        # Ejecuta la función de búsqueda pasada y emite el resultado.
+        result = self.func(*self.args, **self.kwargs)
+        self.result_ready.emit(result)
 
-#directorio donde se guardarán los libros
-DIR_PATH = 'Referencias'
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Buscador de referencias")
+        self.setWindowIcon(QtGui.QIcon("./imgs/favicon.ico"))
+        
+        # Variable para almacenar la carpeta seleccionada
+        self.dir_path = ''
+        
+        # Widget central y layout principal
+        central_widget = QtWidgets.QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QtWidgets.QVBoxLayout(central_widget)
+        
+        # Título de la aplicación
+        title_label = QtWidgets.QLabel("Buscador de referencias")
+        title_font = QtGui.QFont()
+        title_font.setPointSize(25)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_label.setAlignment(QtCore.Qt.AlignCenter)
+        main_layout.addWidget(title_label)
+        
+        # Layout para el formulario de búsqueda
+        form_layout = QtWidgets.QGridLayout()
+        main_layout.addLayout(form_layout)
+        
+        # Etiqueta y campo para ingresar el término de búsqueda
+        search_label = QtWidgets.QLabel("¿Qué palabras quieres buscar?")
+        search_font = QtGui.QFont()
+        search_font.setPointSize(15)
+        search_label.setFont(search_font)
+        form_layout.addWidget(search_label, 0, 0)
+        
+        self.search_edit = QtWidgets.QLineEdit()
+        self.search_edit.setFont(search_font)
+        form_layout.addWidget(self.search_edit, 0, 1)
+        
+        # Etiqueta y combobox para seleccionar un libro
+        book_label = QtWidgets.QLabel("Selecciona un libro")
+        book_label.setFont(search_font)
+        form_layout.addWidget(book_label, 1, 0)
+        
+        self.book_combo = QtWidgets.QComboBox()
+        self.book_combo.setFont(QtGui.QFont("", 12))
+        form_layout.addWidget(self.book_combo, 1, 1)
+        self.book_combo.currentIndexChanged.connect(self.update_note_label)
+        
+        # Botón para seleccionar la carpeta de documentos
+        folder_btn = QtWidgets.QPushButton("Seleccionar carpeta")
+        folder_btn.setFont(search_font)
+        folder_btn.clicked.connect(self.select_folder)
+        form_layout.addWidget(folder_btn, 2, 1)
+        
+        # Etiqueta para los resultados
+        result_label = QtWidgets.QLabel("Resultados:")
+        result_label.setFont(search_font)
+        main_layout.addWidget(result_label)
+        
+        # Área de texto para mostrar los resultados
+        self.results_text = QtWidgets.QTextEdit()
+        self.results_text.setFont(search_font)
+        main_layout.addWidget(self.results_text)
+        
+        # Nota para el usuario sobre el tipo de búsqueda a utilizar
+        self.note_label = QtWidgets.QLabel("")
+        note_font = QtGui.QFont()
+        note_font.setPointSize(12)
+        self.note_label.setFont(note_font)
+        self.note_label.setStyleSheet("color: blue;")
+        main_layout.addWidget(self.note_label)
+        
+        # Layout horizontal para los botones de búsqueda
+        btn_layout = QtWidgets.QHBoxLayout()
+        main_layout.addLayout(btn_layout)
+        
+        search_btn = QtWidgets.QPushButton("Buscar")
+        search_btn.setFont(search_font)
+        search_btn.clicked.connect(self.press_search_btn)
+        btn_layout.addWidget(search_btn)
+        
+        ocr_btn = QtWidgets.QPushButton("Búsqueda inteligente")
+        ocr_btn.setFont(search_font)
+        ocr_btn.clicked.connect(self.press_OCR_btn)
+        btn_layout.addWidget(ocr_btn)
 
+        # Botón "Guardar" para guardar el resultado
+        save_btn = QtWidgets.QPushButton("Guardar")
+        save_btn.setFont(search_font)
+        save_btn.clicked.connect(self.save_result)
+        btn_layout.addWidget(save_btn)
+    
+    def select_folder(self):
+        """Permite al usuario seleccionar la carpeta de documentos y actualiza el combobox."""
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Selecciona la carpeta de documentos")
+        if folder:
+            self.dir_path = folder
+            # Obtener los paths completos de los PDFs usando pdf_utils
+            full_paths = pdf_utils.get_PDFs(self.dir_path)
+            sub_dirs = pdf_utils.get_dirs(self.dir_path)
+            for sub in sub_dirs:
+                folder_path = f"{self.dir_path}/{sub}"
+                full_paths += pdf_utils.get_PDFs(folder_path)
+            # Crear un diccionario: {nombre_del_archivo: path_completo}
+            import os
+            self.books_dict = {}
+            for path in full_paths:
+                file_name = os.path.basename(path)
+                self.books_dict[file_name] = path
+            # Actualizar el combobox con solo los nombres de los archivos
+            self.book_combo.clear()
+            self.book_combo.addItems(list(self.books_dict.keys()))
+            self.update_note_label()  # Actualiza la nota según el primer PDF disponible
 
-raiz = tkinter.Tk()
-raiz.title('Buscador de referencias')
-raiz.iconbitmap("./imgs/favicon.ico")
-
-
-#creación del frame_principal
-frmMain = tkinter.Frame(raiz)
-#el frame_principal se expande con la ventana
-frmMain.pack(fill='both',expand=True)
-
-##############################
-# FRAME PRINCIPAL #
-##############################
-#fuente para el título principal
-fontMain = tkinter.font.Font(size=25, weight=tkinter.font.BOLD)
-
-#Título del programa
-lbTitulo = tkinter.Label(frmMain,text='Buscador de referencias',font=fontMain)
-lbTitulo.grid(row=0,column=0)
-
-#frame para el formulario de búsqueda
-frmForm = tkinter.Frame(frmMain)
-frmForm.grid(row=1,column=0)
-
-##############################
-# FRAME FORMULARIO #
-##############################
-
-#font para el texto del contenido
-fontContent = tkinter.font.Font(size=15)
-
-#label para preguntar palabras
-lbAsk = tkinter.Label(frmForm,
-    text='¿Qué palabras quieres buscar?',
-    font=fontContent)
-lbAsk.grid(row=0,column=0)
-
-#entrada para las palabras clave
-txtSearch = tkinter.Entry(frmForm,
-    font=fontContent)
-txtSearch.grid(row=0,column=1,padx=10,pady=10)
-
-#etiqueta para pedir seleccionar un libro
-lbAsk = tkinter.Label(frmForm,
-    text='Selecciona un libro',
-    font=fontContent)
-lbAsk.grid(row=1,column=0)
-
-#lista desplegable de los libros disponibles
-#libros en la carpeta principal
-books_path = functions.get_PDFs(DIR_PATH)
-#libros de las carpetas hijas
-sub_dir = functions.get_dirs(DIR_PATH)
-for folder in sub_dir:
-    #se agrega el símbolo para indicar directorio
-    folder_path = DIR_PATH+'/'+folder
-    #paths de los pdfs existentes
-    books_path += functions.get_PDFs(folder_path)
-fontList = tkinter.font.Font(size=12)
-cmbBookList = tkinter.ttk.Combobox(frmForm,
-    values=books_path,
-    width=40,font=fontList,
-    state='readonly')
-cmbBookList.grid(row=1,column=1)
-
-##############################
-# FRAME PRINCIPAL #
-##############################
-
-#label de título para los resultados
-lbResultTitle = tkinter.Label(frmMain,
-    text='Resultados:',font=fontContent)
-lbResultTitle.grid(row=3,column=0,pady=20)
-
-#frame para los resultados
-frmResults = tkinter.Frame(frmMain)
-frmResults.grid(row=5,column=0,pady=25,padx=15)
-#frmResults.config(background='white')
-
-##############################
-# FRAME RESULTADOS  #
-##############################
-
-#label para mostrar los resultados
-txtResults = tkinter.Text(frmResults,
-    font=fontContent,width=75,height=15)
-txtResults.grid(row=1,column=0)
-#scrollbar para los resultados
-scrollResult = tkinter.Scrollbar(frmResults,
-    command=txtResults.yview)
-scrollResult.grid(row=1,column=1,sticky="nsew")
-txtResults.config(yscrollcommand=scrollResult.set)
-
-##############################
-# FRAME PRINCIPAL #
-##############################
-#función que ejecutará el botón
-def press_search_btn():
-    #elimina el contenido del cuadro de texto
-    txtResults.delete(1.0,tkinter.constants.END)
-    #toma el contenido de combobox
-    selected_book = cmbBookList.get()
-    #toma las palabras a buscar
-    search_text = txtSearch.get()
-    #realiza la búsqueda sólo si se ha seleccionado
-    #un libro y se ha escrito palabra clave
-    if(len(search_text)>0 and selected_book!=''):
-        #escribe el nombre del libro en el cuadro de texto
-        txtResults.insert(tkinter.constants.END,
-                        chars=selected_book+'\n')
-        #nombre del archivo de texto donde se guardará la búsqueda
-        #save results optional
-        #txt_name = selected_book.replace('./','').replace(' ','').replace('/','_').replace('.pdf','.txt')
-        print(selected_book)
-        #resultado de la búsqueda
-        resultados = functions.scan_book(selected_book,search_text)
-        #sólo si hay coincidencia se agrega contenido
-        if(len(resultados)>0):
-            #save results optional
-            #content = txt_name+'\n'
-            content = resultados
-        else:
-            content = 'No se ha encontrado información.'
-        #imprime los resultados en pantalla
-        txtResults.insert(tkinter.constants.END,
-            chars=content)
-        #save results optional
-        #if(functions.write_text(content,'./searching',txt_name)):
-            #print('\nGuardado archivo de texto:',txt_name)
-        print()
-            
-        #desbloquea el botón para otra búsqueda
-        #btnSearch['state'] = 'normal'
-
-def press_OCR_btn():
-    #elimina el contenido del cuadro de texto
-    txtResults.delete(1.0,tkinter.constants.END)
-    #toma el contenido de combobox
-    selected_book = cmbBookList.get()
-    #toma las palabras a buscar
-    search_text = txtSearch.get()
-    #realiza la búsqueda sólo si se ha seleccionado
-    #un libro y se ha escrito palabra clave
-    if(len(search_text)>0 and selected_book!=''):
-        result=tkinter.messagebox.askquestion('Búsqueda inteligente',
-            'La búsqueda inteligente tarda más tiempo\n'+
-            'para poder leer mejor el contenido.\n'+
-            '¿Quiere continuar?')
-        if(result=='yes'):
-            #escribe el nombre del libro en el cuadro de texto
-            txtResults.insert(tkinter.constants.END,
-                            chars=selected_book+'\n')
-            #se imprime el path del libro en consola
-            print(selected_book)
-            #resultado de la búsqueda
-            resultados = functions.scan_book_with_OCR(selected_book,search_text)
-            #sólo si hay coincidencia se agrega contenido
-            if(len(resultados)>0):
-                #save results optional
-                #content = txt_name+'\n'
-                content = resultados
+    def update_note_label(self):
+        """Actualiza la nota que sugiere qué tipo de búsqueda realizar según si el PDF tiene texto seleccionable."""
+        selected_name = self.book_combo.currentText()
+        if selected_name:
+            full_path = self.books_dict.get(selected_name)
+            if pdf_utils.has_selectable_text(full_path):
+                self.note_label.setText("Este PDF tiene texto seleccionable. Intenta primero la búsqueda normal.")
             else:
-                content = 'No se ha encontrado información.'
-            #imprime los resultados en pantalla
-            txtResults.insert(tkinter.constants.END,
-                chars=content)
-            #save results optional
-            #if(functions.write_text(content,'./searching',txt_name)):
-                #print('\nGuardado archivo de texto:',txt_name)
-            print()
+                self.note_label.setText("Este PDF no tiene texto seleccionable. Intenta la búsqueda inteligente directamente.")
 
-#botón de búsqueda
-btnSearch = tkinter.Button(frmMain,
-    text='Buscar',font=fontContent,
-    command=press_search_btn)
-btnSearch.grid(row=2,column=0,pady=10)
+    def save_result(self):
+        """Permite seleccionar la ubicación y el nombre del archivo para guardar el contenido de resultados en un archivo .txt."""
+        content = self.results_text.toPlainText()
+        if not content.strip():
+            QtWidgets.QMessageBox.information(self, "Guardar resultado", "No hay contenido para guardar.")
+            return
 
-#botón de búsqueda con OCR
-btnOCR = tkinter.Button(frmMain,
-    text='Búsqueda inteligente',font=fontContent,
-    command=press_OCR_btn)
-btnOCR.grid(row=6,column=0,pady=10)
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar resultado", "", "Archivos de texto (*.txt)")
+        if file_path:
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                QtWidgets.QMessageBox.information(self, "Guardar resultado", f"Resultado guardado en:\n{file_path}")
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(self, "Guardar resultado", f"Error al guardar el archivo:\n{str(e)}")
 
-raiz.mainloop()
+    def press_search_btn(self):
+        self.results_text.clear()
+        selected_name = self.book_combo.currentText()  # Nombre del archivo
+        search_text = self.search_edit.text()
+        if search_text and selected_name:
+            full_path = self.books_dict.get(selected_name)
+            self.results_text.append(selected_name)
+            self.progress_dialog = QtWidgets.QProgressDialog("Buscando...", "", 0, 0, self)
+            self.progress_dialog.setWindowTitle("Búsqueda en progreso")
+            self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+            self.progress_dialog.show()
+            # Se usa la función scan_book del módulo pdf_utils
+            self.worker = Worker(pdf_utils.scan_book, full_path, search_text)
+            self.worker.result_ready.connect(self.handle_worker_result)
+            self.worker.start()
 
+    def press_OCR_btn(self):
+        self.results_text.clear()
+        selected_name = self.book_combo.currentText()  # Nombre del archivo
+        search_text = self.search_edit.text()
+        if search_text and selected_name:
+            reply = QtWidgets.QMessageBox.question(
+                self, "Búsqueda inteligente",
+                "La búsqueda inteligente tarda más tiempo para poder leer mejor el contenido.\n¿Quiere continuar?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No
+            )
+            if reply == QtWidgets.QMessageBox.Yes:
+                self.results_text.append(selected_name)
+                full_path = self.books_dict.get(selected_name)
+                self.progress_dialog = QtWidgets.QProgressDialog("Buscando con OCR...", "", 0, 0, self)
+                self.progress_dialog.setWindowTitle("Búsqueda en progreso")
+                self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+                self.progress_dialog.show()
+                # Se usa la función scan_book_with_OCR del módulo ocr_utils
+                self.worker = Worker(ocr_utils.scan_book_with_OCR, full_path, search_text)
+                self.worker.result_ready.connect(self.handle_worker_result)
+                self.worker.start()
+                
+    def handle_worker_result(self, result):
+        if hasattr(self, 'progress_dialog'):
+            self.progress_dialog.close()
+        content = result if result else "No se ha encontrado información."
+        self.results_text.append(content)
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
